@@ -3939,8 +3939,6 @@ namespace System.Windows.Forms {
         [ComVisible(true)]
         internal class ListBoxAccessibleObject : ControlAccessibleObject
         {
-            private const int LISTBOX_ACC_ITEM_INDEX = 1;
-
             private readonly ListBox _owningListBox;
             private readonly ListBoxItemAccessibleObjectCollection _itemAccessibleObjects;
 
@@ -3952,6 +3950,11 @@ namespace System.Windows.Forms {
             {
                 _owningListBox = owningListBox;
                 _itemAccessibleObjects = new ListBoxItemAccessibleObjectCollection(owningListBox, this);
+            }
+
+            public override void DoDefaultAction()
+            {
+                SetFocus();
             }
 
             internal override UnsafeNativeMethods.IRawElementProviderSimple[] GetSelection()
@@ -3998,7 +4001,8 @@ namespace System.Windows.Forms {
             internal override bool IsPatternSupported(int patternId)
             {
                 if (patternId == NativeMethods.UIA_ScrollPatternId ||
-                    patternId == NativeMethods.UIA_SelectionPatternId)
+                    patternId == NativeMethods.UIA_SelectionPatternId ||
+                    patternId == NativeMethods.UIA_LegacyIAccessiblePatternId)
                 {
                     return true;
                 }
@@ -4285,7 +4289,7 @@ namespace System.Windows.Forms {
 
             public override void DoDefaultAction()
             {
-                SelectItem();
+                SetFocus();
             }
 
             public override void Select(AccessibleSelection flags)
