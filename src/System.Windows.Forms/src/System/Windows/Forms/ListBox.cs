@@ -4116,8 +4116,8 @@ namespace System.Windows.Forms {
                         return IsPatternSupported(NativeMethods.UIA_SelectionPatternId);
                     case NativeMethods.UIA_IsScrollPatternAvailablePropertyId:
                         return IsPatternSupported(NativeMethods.UIA_ScrollPatternId);
-                    //case NativeMethods.UIA_ClassNamePropertyId:
-                    //    return nameof(ListBox);
+                    case NativeMethods.UIA_IsLegacyIAccessiblePatternAvailablePropertyId:
+                        return IsPatternSupported(NativeMethods.UIA_LegacyIAccessiblePatternId);
                     default:
                         return base.GetPropertyValue(propertyID);
                 }
