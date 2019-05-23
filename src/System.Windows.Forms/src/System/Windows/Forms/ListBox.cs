@@ -4078,6 +4078,7 @@ namespace System.Windows.Forms {
 
             private void InitAccessibleObjectCollection()
             {
+                _itemAccessibleObjects.Clear();
                 foreach (var entry in _owningListBox.Items.EntryArray.Entries)
                 {
                     if (entry != null)
@@ -4543,8 +4544,8 @@ namespace System.Windows.Forms {
 
                 int itemsHeightSum = 0;
                 int visibleItemsCount = 0;
-                int listBoxHeight = _owningListBox.Bounds.Height;
-                int itemsCount = _owningListBox.SendMessage(NativeMethods.LB_GETCOUNT, 0, 0).ToInt32();
+                int listBoxHeight = _owningAccessibleObject.VisibleArea.Height;
+                int itemsCount = _owningListBox.Items.Count;
 
                 for (int i = firstVisibleIndex; i < itemsCount; i++)
                 {

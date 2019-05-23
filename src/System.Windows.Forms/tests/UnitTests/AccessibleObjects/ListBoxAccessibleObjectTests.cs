@@ -25,7 +25,8 @@ namespace System.Windows.Forms.Tests.AccessibleObjects
 
             for (int i = 1; i <= childCount; i++)
             {
-                var child = (ListBox.ListBoxAccessibleObject)listBox.AccessibilityObject.GetObjectForChildInternal(i);
+                var item = listBox.Items.EntryArray.Entries[i];
+                var child = (AccessibleObject)((ListBox.ListBoxAccessibleObject)listBox.AccessibilityObject).ItemAccessibleObjects[item];
                 Assert.True(child.IsPatternSupported(NativeMethods.UIA_ScrollItemPatternId));
             }
         }
