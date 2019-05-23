@@ -809,15 +809,9 @@ namespace System.Windows.Forms
             return hr;
         }
 
-        internal virtual object GetObjectForChildInternal(int idChild)
-        {
-            // No need to implement this for patterns and properties
-            return null;
-        }
-
         object UnsafeNativeMethods.IAccessibleEx.GetObjectForChild(int idChild)
         {
-            return GetObjectForChildInternal(idChild);
+            return null;
         }
 
         // This method is never called
@@ -2678,6 +2672,7 @@ namespace System.Windows.Forms
                                     UnsafeNativeMethods.ILegacyIAccessibleProvider,
                                     UnsafeNativeMethods.ISelectionProvider,
                                     UnsafeNativeMethods.ISelectionItemProvider,
+                                    UnsafeNativeMethods.IScrollItemProvider,
                                     UnsafeNativeMethods.IRawElementProviderHwndOverride {
 
         private IAccessible publicIAccessible;                       // AccessibleObject as IAccessible
@@ -2704,6 +2699,7 @@ namespace System.Windows.Forms
         private UnsafeNativeMethods.ILegacyIAccessibleProvider publicILegacyIAccessibleProvider;   // AccessibleObject as ILegayAccessibleProvider
         private UnsafeNativeMethods.ISelectionProvider publicISelectionProvider;                  // AccessibleObject as ISelectionProvider
         private UnsafeNativeMethods.ISelectionItemProvider publicISelectionItemProvider;          // AccessibleObject as ISelectionItemProvider
+        private UnsafeNativeMethods.IScrollItemProvider publicIScrollItemProvider;          // AccessibleObject as IScrollItemProvider
         private UnsafeNativeMethods.IRawElementProviderHwndOverride publicIRawElementProviderHwndOverride; // AccessibleObject as IRawElementProviderHwndOverride
 
         /// <summary>
@@ -2733,6 +2729,7 @@ namespace System.Windows.Forms
             publicILegacyIAccessibleProvider = (UnsafeNativeMethods.ILegacyIAccessibleProvider)accessibleImplemention;
             publicISelectionProvider = (UnsafeNativeMethods.ISelectionProvider)accessibleImplemention;
             publicISelectionItemProvider = (UnsafeNativeMethods.ISelectionItemProvider)accessibleImplemention;
+            publicIScrollItemProvider = (UnsafeNativeMethods.IScrollItemProvider)accessibleImplemention;
             publicIRawElementProviderHwndOverride = (UnsafeNativeMethods.IRawElementProviderHwndOverride)accessibleImplemention;
             // Note: Deliberately not holding onto AccessibleObject to enforce all access through the interfaces
         }
@@ -3060,6 +3057,10 @@ namespace System.Windows.Forms
                 {
                     return (UnsafeNativeMethods.ISelectionItemProvider)this;
                 }
+                else if (patternId == NativeMethods.UIA_ScrollItemPatternId)
+                {
+                    return (UnsafeNativeMethods.IScrollItemProvider)this;
+                }
                 else
                 {
                     return null;
@@ -3352,6 +3353,11 @@ namespace System.Windows.Forms
             get => publicISelectionItemProvider.IsSelected;
         }
 
+        void UnsafeNativeMethods.IScrollItemProvider.ScrollIntoView()
+        {
+            publicIScrollItemProvider.ScrollIntoView();
+        }
+
         /// <summary>
         /// The logical element that supports the SelectionPattern for this Item.
         /// </summary>
@@ -3360,6 +3366,7 @@ namespace System.Windows.Forms
         {
             get => publicISelectionItemProvider.SelectionContainer;
         }
+
 
         /// <summary>
         /// Request a provider for the specified component. The returned provider can supply additional
