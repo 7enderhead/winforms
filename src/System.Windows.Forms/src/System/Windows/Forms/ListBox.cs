@@ -429,6 +429,7 @@ namespace System.Windows.Forms {
         {
             get
             {
+                //return base.Focused;
                 if (base.Focused)
                     return true;
                 IntPtr focus = UnsafeNativeMethods.GetFocus();
@@ -1687,6 +1688,8 @@ namespace System.Windows.Forms {
         /// </summary>
         protected override void OnSelectedIndexChanged(EventArgs e) {
             base.OnSelectedIndexChanged(e);
+
+            AccessibilityObject.GetChild(SelectedIndex)?.SetFocus(); //This is a solution so that when clicking on keyboard arrows the item can have the focus
 
             // set the position in the dataSource, if there is any
             // we will only set the position in the currencyManager if it is different
@@ -3940,6 +3943,7 @@ namespace System.Windows.Forms {
         {
             private readonly ListBox _owningListBox;
             private readonly ListBoxItemAccessibleObjectCollection _itemAccessibleObjects;
+            private readonly IAccessible _systemIAccessible;
 
             /// <summary>
             /// Initializes new instance of ListBoxAccessibleObject.
@@ -3949,6 +3953,51 @@ namespace System.Windows.Forms {
             {
                 _owningListBox = owningListBox;
                 _itemAccessibleObjects = new ListBoxItemAccessibleObjectCollection(owningListBox, this);
+                _systemIAccessible = GetSystemIAccessibleInternal();
+            }
+
+            public override AccessibleObject GetChild(int index)
+            {
+                return GetChildFragment(index);
+            }
+
+            public override string DefaultAction => "";/*_systemIAccessible?.accDefaultAction[0];*/ //TODO need write action
+
+            public override AccessibleStates State
+            {
+                get
+                {
+                    AccessibleStates state = AccessibleStates.Focusable;
+
+                    //if (_owningListBox.Focused)
+                    //{
+                    //    state |= AccessibleStates.Focused;  //This does not work. Anyway ListBoxAccessibleObject may have Focused state
+                    //}
+                    return state;
+                }
+            }
+
+            internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
+            {
+                Debug.WriteLine("Get focus LB");
+                return GetChildFragment(_owningListBox.SelectedIndex);
+            }
+
+            public override AccessibleObject GetFocused()
+            {
+                return GetChildFragment(_owningListBox.SelectedIndex);
+            }
+
+            public override AccessibleObject GetSelected()
+            {
+                Debug.WriteLine("Get selected LB -----------");
+                return GetChildFragment(_owningListBox.SelectedIndex);
+            }
+
+            internal override void SelectItem()
+            {
+                Debug.WriteLine("LB select item");
+                GetChildFragment(_owningListBox.SelectedIndex).SelectItem();
             }
 
             public override void DoDefaultAction()
@@ -4136,7 +4185,7 @@ namespace System.Windows.Forms {
             internal override void SetFocus()
             {
                 RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                base.SetFocus();
+                GetSelected().SetFocus();
             }
 
             internal override bool CanSelectMultiple => false;
@@ -4242,6 +4291,24 @@ namespace System.Windows.Forms {
                 _systemIAccessible = owningAccessibleObject.GetSystemIAccessibleInternal();
             }
 
+            internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
+            {
+                Debug.WriteLine("Get focus Item");
+                return base.GetFocus();
+            }
+
+            public override AccessibleObject GetFocused()
+            {
+                Debug.WriteLine("Get focused Item --------------");
+                return base.GetFocused();
+            }
+
+            public override AccessibleObject GetSelected()
+            {
+                Debug.WriteLine("Get selected Item -----------");
+                return base.GetSelected();
+            }
+
             /// <summary>
             /// Gets the ListBox Item bounds.
             /// </summary>
@@ -4342,7 +4409,7 @@ namespace System.Windows.Forms {
             {
                 get
                 {
-                    return _owningListBox.AccessibilityObject;
+                    return _owningAccessibleObject;
                 }
             }
 
@@ -4472,14 +4539,16 @@ namespace System.Windows.Forms {
             {
                 get
                 {
-                    AccessibleStates state = AccessibleStates.Focusable;
-                    if (_owningListBox.Focused)
-                    {
-                        state |= AccessibleStates.Focused;
-                    }
+                    AccessibleStates state = AccessibleStates.Selectable | AccessibleStates.Focusable;
 
-                    state |= (AccessibleStates)_systemIAccessible.get_accState(GetChildId());
-                    return state;
+                    if (_owningListBox.SelectedIndex == _itemEntryIndex)
+                    {
+                        return state |= AccessibleStates.Selected | AccessibleStates.Focused;
+                    }
+                    else
+                    {
+                        return state |= (AccessibleStates)(_systemIAccessible.get_accState(GetChildId()));
+                    }
                 }
             }
 
@@ -4495,6 +4564,8 @@ namespace System.Windows.Forms {
                 _owningListBox.SelectedIndex = _itemEntryIndex;
 
                 SafeNativeMethods.InvalidateRect(new HandleRef(this, _owningListBox.Handle), null, false);
+
+                RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
             }
 
             internal override void AddToSelection()
