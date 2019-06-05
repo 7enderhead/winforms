@@ -1710,8 +1710,8 @@ namespace System.Windows.Forms {
         ///     still fired to external listeners
         /// </summary>
         protected override void OnSelectedIndexChanged(EventArgs e) {
-            AccessibilityObject.GetSelected().RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
-            AccessibilityObject.GetSelected().RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
+            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
 
             base.OnSelectedIndexChanged(e);
 
@@ -4156,7 +4156,7 @@ namespace System.Windows.Forms {
                         return Name;
                     case NativeMethods.UIA_HasKeyboardFocusPropertyId:
                         return false;
-                    //return _owningListBox.Focused;
+                        //return _owningListBox.Focused;
                     case NativeMethods.UIA_NativeWindowHandlePropertyId:
                         return _owningListBox.Handle;
                     case NativeMethods.UIA_IsSelectionPatternAvailablePropertyId:
