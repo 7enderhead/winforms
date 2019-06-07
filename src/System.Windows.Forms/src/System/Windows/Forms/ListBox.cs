@@ -1556,29 +1556,6 @@ namespace System.Windows.Forms {
             base.OnChangeUICues(e);
         }
 
-        protected override void OnGotFocus(EventArgs e)
-        {
-            if (SelectedIndex == -1)
-            {
-                var firstChild = AccessibilityObject.GetChild(0);
-                if(firstChild != null)
-                {
-                    firstChild.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                }
-                else
-                {
-                    AccessibilityObject.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                }
-                
-            }
-            else
-            {
-                AccessibilityObject.GetChild(SelectedIndex).SetFocus();
-            }
-            base.OnGotFocus(e);
-        }
-
-
         /// <summary>
         ///     Actually goes and fires the drawItem event.  Inheriting controls
         ///     should use this to know when the event is fired [this is preferable to
@@ -1710,10 +1687,9 @@ namespace System.Windows.Forms {
         ///     still fired to external listeners
         /// </summary>
         protected override void OnSelectedIndexChanged(EventArgs e) {
-            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
-            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-
             base.OnSelectedIndexChanged(e);
+
+            AccessibilityObject.GetChild(SelectedIndex)?.SetFocus(); //This is a solution so that when clicking on keyboard arrows the item can have the focus
 
             // set the position in the dataSource, if there is any
             // we will only set the position in the currencyManager if it is different
@@ -3950,8 +3926,8 @@ namespace System.Windows.Forms {
 
         internal override bool SupportsUiaProviders => true;
 
-        /// <summary>
-        /// </summary>
+        /// <devdoc>
+        /// </devdoc>
         protected override AccessibleObject CreateAccessibilityInstance()
         {
             return new ListBoxAccessibleObject(this);
@@ -3965,8 +3941,8 @@ namespace System.Windows.Forms {
         [ComVisible(true)]
         internal class ListBoxAccessibleObject : ControlAccessibleObject
         {
-            private readonly ListBoxItemAccessibleObjectCollection _itemAccessibleObjects;
             private readonly ListBox _owningListBox;
+            private readonly ListBoxItemAccessibleObjectCollection _itemAccessibleObjects;
             private readonly IAccessible _systemIAccessible;
 
             /// <summary>
@@ -3980,26 +3956,105 @@ namespace System.Windows.Forms {
                 _systemIAccessible = GetSystemIAccessibleInternal();
             }
 
-            #region Internal properties
-            internal override UnsafeNativeMethods.IRawElementProviderFragmentRoot FragmentRoot
+            public override AccessibleObject GetChild(int index)
+            {
+                return GetChildFragment(index);
+            }
+
+            public override string DefaultAction => "";/*_systemIAccessible?.accDefaultAction[0];*/ //TODO need write action
+
+            public override AccessibleStates State
             {
                 get
                 {
-                    return this;
+                    AccessibleStates state = AccessibleStates.Focusable;
+
+                    //if (_owningListBox.Focused)
+                    //{
+                    //    state |= AccessibleStates.Focused;  //This does not work. Anyway ListBoxAccessibleObject may have Focused state
+                    //}
+                    return state;
                 }
             }
 
-            internal override bool IsSelectionRequired => true;
+            internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
+            {
+                Debug.WriteLine("Get focus LB");
+                return GetChildFragment(_owningListBox.SelectedIndex);
+            }
 
-            /// <summary>
-            /// Gets the collection of item accessible objects.
-            /// </summary>
-            internal ListBoxItemAccessibleObjectCollection ItemAccessibleObjects
+            public override AccessibleObject GetFocused()
+            {
+                return GetChildFragment(_owningListBox.SelectedIndex);
+            }
+
+            public override AccessibleObject GetSelected()
+            {
+                Debug.WriteLine("Get selected LB -----------");
+                return GetChildFragment(_owningListBox.SelectedIndex);
+            }
+
+            internal override void SelectItem()
+            {
+                Debug.WriteLine("LB select item");
+                GetChildFragment(_owningListBox.SelectedIndex).SelectItem();
+            }
+
+            public override void DoDefaultAction()
+            {
+                SetFocus();
+            }
+
+            internal override UnsafeNativeMethods.IRawElementProviderSimple[] GetSelection()
+            {
+                int selectedIndex = _owningListBox.SelectedIndex;
+
+                AccessibleObject itemAccessibleObject = GetChildFragment(selectedIndex);
+                if (itemAccessibleObject != null)
+                {
+                    return new UnsafeNativeMethods.IRawElementProviderSimple[] {
+                        itemAccessibleObject
+                    };
+                }
+
+                return new UnsafeNativeMethods.IRawElementProviderSimple[0];
+            }
+
+            public override Rectangle Bounds
             {
                 get
                 {
-                    return _itemAccessibleObjects;
+                    return _owningListBox.GetToolNativeScreenRectangle();
                 }
+            }
+
+            internal Rectangle VisibleArea //ListBox bounds without scrollbars
+            {
+                get
+                {
+                    return base.Bounds;
+                }
+            }
+
+            internal override bool IsIAccessibleExSupported()
+            {
+                if (_owningListBox != null)
+                {
+                    return true;
+                }
+
+                return base.IsIAccessibleExSupported();
+            }
+
+            internal override bool IsPatternSupported(int patternId)
+            {
+                if (patternId == NativeMethods.UIA_ScrollPatternId ||
+                    patternId == NativeMethods.UIA_SelectionPatternId ||
+                    patternId == NativeMethods.UIA_LegacyIAccessiblePatternId)
+                {
+                    return true;
+                }
+                return base.IsPatternSupported(patternId);
             }
 
             internal override int[] RuntimeId
@@ -4024,79 +4079,15 @@ namespace System.Windows.Forms {
                 }
             }
 
-            internal Rectangle VisibleArea //ListBox bounds without scrollbars
-            {
-                get
-                {
-                    return base.Bounds;
-                }
-            }
-            #endregion
-
-            #region Public properties
-            public override Rectangle Bounds
-            {
-                get
-                {
-                    return _owningListBox.GetToolNativeScreenRectangle();
-                }
-            }
-
-            public override AccessibleStates State
-            {
-                get
-                {
-                    AccessibleStates state = AccessibleStates.Focusable;
-
-                    if (_owningListBox.Focused)
-                    {
-                        state |= AccessibleStates.Focused;
-                    }
-
-                    return state;
-                }
-            }
-            #endregion
-
-            #region Private methods 
-            private void InitAccessibleObjectCollection()
-            {
-                _itemAccessibleObjects.Clear();
-                foreach (var entry in _owningListBox.Items.EntryArray.Entries)
-                {
-                    if (entry != null)
-                    {
-                        var _ = _itemAccessibleObjects[entry];
-                    }
-                }
-            }
-            #endregion
-
-            #region Internal methods
             /// <summary>
-            /// Return the child object at the given screen coordinates.
+            /// Gets the collection of item accessible objects.
             /// </summary>
-            /// <param name="x">X coordinate.</param>
-            /// <param name="y">Y coordinate.</param>
-            /// <returns>The accessible object of corresponding element in the provided coordinates.</returns>
-            internal override UnsafeNativeMethods.IRawElementProviderFragment ElementProviderFromPoint(double x, double y)
+            internal ListBoxItemAccessibleObjectCollection ItemAccessibleObjects
             {
-                var systemIAccessible = GetSystemIAccessibleInternal();
-                if (systemIAccessible != null)
+                get
                 {
-                    object result = systemIAccessible.accHitTest((int)x, (int)y);
-                    if (result is int)
-                    {
-                        int childId = (int)result;
-                        return GetChildFragment(childId - 1);
-                    }
-                    else
-                    {
-                        return null;
-                    }
+                    return _itemAccessibleObjects;
                 }
-
-                return base.ElementProviderFromPoint(x, y);
             }
 
             /// <summary>
@@ -4106,7 +4097,7 @@ namespace System.Windows.Forms {
             /// <returns>Returns the element in the specified direction.</returns>
             internal override UnsafeNativeMethods.IRawElementProviderFragment FragmentNavigate(UnsafeNativeMethods.NavigateDirection direction)
             {
-                if (direction == UnsafeNativeMethods.NavigateDirection.FirstChild ||
+                if (direction == UnsafeNativeMethods.NavigateDirection.FirstChild || 
                     direction == UnsafeNativeMethods.NavigateDirection.LastChild)
                 {
                     InitAccessibleObjectCollection();
@@ -4133,12 +4124,24 @@ namespace System.Windows.Forms {
                 return base.FragmentNavigate(direction);
             }
 
-            internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
+            private void InitAccessibleObjectCollection()
             {
-                AccessibleObject focusedChild = GetFocused();
-                focusedChild.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+                _itemAccessibleObjects.Clear();
+                foreach (var entry in _owningListBox.Items.EntryArray.Entries)
+                {
+                    if (entry != null)
+                    {
+                        var _ = _itemAccessibleObjects[entry];
+                    }
+                }
+            }
 
-                return focusedChild;
+            internal override UnsafeNativeMethods.IRawElementProviderFragmentRoot FragmentRoot
+            {
+                get
+                {
+                    return this;
+                }
             }
 
             /// <summary>
@@ -4155,8 +4158,7 @@ namespace System.Windows.Forms {
                     case NativeMethods.UIA_NamePropertyId:
                         return Name;
                     case NativeMethods.UIA_HasKeyboardFocusPropertyId:
-                        return false;
-                        //return _owningListBox.Focused;
+                        return _owningListBox.Focused;
                     case NativeMethods.UIA_NativeWindowHandlePropertyId:
                         return _owningListBox.Handle;
                     case NativeMethods.UIA_IsSelectionPatternAvailablePropertyId:
@@ -4170,66 +4172,49 @@ namespace System.Windows.Forms {
                 }
             }
 
-            internal override UnsafeNativeMethods.IRawElementProviderSimple[] GetSelection()
-            {
-                AccessibleObject itemAccessibleObject = GetSelected();
-                if (itemAccessibleObject != null)
-                {
-                    return new UnsafeNativeMethods.IRawElementProviderSimple[] {
-                        itemAccessibleObject
-                    };
-                }
-
-                return new UnsafeNativeMethods.IRawElementProviderSimple[0];
-            }
-
-            internal override bool IsIAccessibleExSupported()
-            {
-                if (_owningListBox != null)
-                {
-                    return true;
-                }
-
-                return base.IsIAccessibleExSupported();
-            }
-
-            internal override bool IsPatternSupported(int patternId)
-            {
-                if (patternId == NativeMethods.UIA_ScrollPatternId ||
-                    patternId == NativeMethods.UIA_SelectionPatternId ||
-                    patternId == NativeMethods.UIA_LegacyIAccessiblePatternId)
-                {
-                    return true;
-                }
-                return base.IsPatternSupported(patternId);
-            }
-
             internal void ResetListItemAccessibleObjects()
             {
                 _itemAccessibleObjects.Clear();
-            }
-
-            internal override void SelectItem()
-            {
-                GetChildFragment(_owningListBox.SelectedIndex).SelectItem();
-            }
-
-            internal override void SetFocus()
-            {
-                GetFocused().RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                GetFocused().SetFocus();
             }
 
             internal override void SetValue(string newValue)
             {
                 Value = newValue;
             }
-            #endregion
 
-            #region Public methods
-            public override AccessibleObject GetChild(int index)
+            internal override void SetFocus()
             {
-                return GetChildFragment(index);
+                RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+                GetSelected().SetFocus();
+            }
+
+            internal override bool CanSelectMultiple => false;
+            internal override bool IsSelectionRequired => true;
+
+            /// <summary>
+            /// Return the child object at the given screen coordinates.
+            /// </summary>
+            /// <param name="x">X coordinate.</param>
+            /// <param name="y">Y coordinate.</param>
+            /// <returns>The accessible object of corresponding element in the provided coordinates.</returns>
+            internal override UnsafeNativeMethods.IRawElementProviderFragment ElementProviderFromPoint(double x, double y)
+            {
+                var systemIAccessible = GetSystemIAccessibleInternal();
+                if (systemIAccessible != null)
+                {
+                    object result = systemIAccessible.accHitTest((int)x, (int)y);
+                    if (result is int)
+                    {
+                        int childId = (int)result;
+                        return GetChildFragment(childId - 1);
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return base.ElementProviderFromPoint(x, y);
             }
 
             public AccessibleObject GetChildFragment(int index)
@@ -4241,36 +4226,13 @@ namespace System.Windows.Forms {
 
                 return _itemAccessibleObjects[_owningListBox.Items.EntryArray.Entries[index]] as AccessibleObject;
             }
-
-            public override AccessibleObject GetFocused()
-            {
-                int index = _owningListBox.FocusedIndex;
-                if (index >= 0)
-                {
-                    return GetChild(index);
-                }
-
-                return null;
-            }
-
-            public override AccessibleObject GetSelected()
-            {
-                int index = _owningListBox.SelectedIndex;
-                if (index >= 0)
-                {
-                    return GetChild(index);
-                }
-
-                return null;
-            }
-            #endregion
         }
 
         internal class ListBoxItemAccessibleObjectCollection : Hashtable
         {
+            private readonly ListBox _owningListBox;
             private readonly ObjectIDGenerator _idGenerator = new ObjectIDGenerator();
             private readonly ListBoxAccessibleObject _owningAccessibleObject;
-            private readonly ListBox _owningListBox;
 
             public ListBoxItemAccessibleObjectCollection(ListBox owningListBoxBox, ListBoxAccessibleObject owningAccessibleObject)
             {
@@ -4313,11 +4275,12 @@ namespace System.Windows.Forms {
         [ComVisible(true)]
         internal class ListBoxItemAccessibleObject : AccessibleObject
         {
+            private readonly ListBox _owningListBox;
             private readonly ListBox.ItemArray.Entry _itemEntry;
             private readonly int _itemEntryIndex;
             private readonly ListBoxAccessibleObject _owningAccessibleObject;
-            private readonly ListBox _owningListBox;
-            private readonly IAccessible _systemIAccessible;
+            private IAccessible _systemIAccessible;
+
 
             public ListBoxItemAccessibleObject(ListBox owningListBox, object itemEntry, ListBoxAccessibleObject owningAccessibleObject)
             {
@@ -4328,50 +4291,24 @@ namespace System.Windows.Forms {
                 _systemIAccessible = owningAccessibleObject.GetSystemIAccessibleInternal();
             }
 
-            #region Internal properties
-            internal override UnsafeNativeMethods.IRawElementProviderFragmentRoot FragmentRoot
+            internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
             {
-                get
-                {
-                    return _owningAccessibleObject;
-                }
+                Debug.WriteLine("Get focus Item");
+                return base.GetFocus();
             }
 
-            internal override bool IsItemSelected
+            public override AccessibleObject GetFocused()
             {
-                get
-                {
-                    return (State & AccessibleStates.Selected) != 0;
-                }
+                Debug.WriteLine("Get focused Item --------------");
+                return base.GetFocused();
             }
 
-            internal override UnsafeNativeMethods.IRawElementProviderSimple ItemSelectionContainer
+            public override AccessibleObject GetSelected()
             {
-                get
-                {
-                    return _owningAccessibleObject;
-                }
+                Debug.WriteLine("Get selected Item -----------");
+                return base.GetSelected();
             }
 
-            /// <summary>
-            /// Gets the runtime ID.
-            /// </summary>
-            internal override int[] RuntimeId
-            {
-                get
-                {
-                    var runtimeId = new int[4];
-                    runtimeId[0] = RuntimeIDFirstItem;
-                    runtimeId[1] = (int)(long)_owningListBox.Handle;
-                    runtimeId[2] = _owningListBox.GetHashCode();
-                    runtimeId[3] = _itemEntry.GetHashCode();
-
-                    return runtimeId;
-                }
-            }
-            #endregion
-
-            #region Public properties
             /// <summary>
             /// Gets the ListBox Item bounds.
             /// </summary>
@@ -4417,6 +4354,107 @@ namespace System.Windows.Forms {
                 }
             }
 
+            public override void DoDefaultAction()
+            {
+                SetFocus();
+            }
+
+            public override void Select(AccessibleSelection flags)
+            {
+                try
+                {
+                    _systemIAccessible.accSelect((int)flags, GetChildId());
+                }
+                catch (ArgumentException)
+                {
+                    // In Everett, the ListBox accessible children did not have any selection capability.
+                    // In Whidbey, they delegate the selection capability to OLEACC.
+                    // However, OLEACC does not deal w/ several Selection flags: ExtendSelection, AddSelection, RemoveSelection.
+                    // OLEACC instead throws an ArgumentException.
+                    // Since Whidbey API's should not throw an exception in places where Everett API's did not, we catch
+                    // the ArgumentException and fail silently.
+                }
+            }
+
+            internal override UnsafeNativeMethods.IRawElementProviderFragment FragmentNavigate(UnsafeNativeMethods.NavigateDirection direction)
+            {
+                switch (direction)
+                {
+                    case UnsafeNativeMethods.NavigateDirection.Parent:
+                        return _owningListBox.AccessibilityObject;
+                    case UnsafeNativeMethods.NavigateDirection.PreviousSibling:
+                        if (_itemEntryIndex < 1)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return (ListBoxItemAccessibleObject)_owningAccessibleObject.ItemAccessibleObjects[_owningListBox.Items.EntryArray.Entries[_itemEntryIndex - 1]];
+                        }
+                    case UnsafeNativeMethods.NavigateDirection.NextSibling:
+                        if (_itemEntryIndex > _owningListBox.Items.Count - 2)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return (ListBoxItemAccessibleObject)_owningAccessibleObject.ItemAccessibleObjects[_owningListBox.Items.EntryArray.Entries[_itemEntryIndex + 1]];
+                        }
+                }
+
+                return base.FragmentNavigate(direction);
+            }
+
+            internal override UnsafeNativeMethods.IRawElementProviderFragmentRoot FragmentRoot
+            {
+                get
+                {
+                    return _owningAccessibleObject;
+                }
+            }
+
+            internal override int GetChildId()
+            {
+                return _itemEntryIndex + 1; // Index is zero-based, Child ID is 1-based.
+            }
+
+            internal override object GetPropertyValue(int propertyID)
+            {
+                switch (propertyID)
+                {
+                    case NativeMethods.UIA_RuntimeIdPropertyId:
+                        return RuntimeId;
+                    case NativeMethods.UIA_BoundingRectanglePropertyId:
+                        return Bounds;
+                    case NativeMethods.UIA_ControlTypePropertyId:
+                        return NativeMethods.UIA_ListItemControlTypeId;
+                    case NativeMethods.UIA_NamePropertyId:
+                        return Name;
+                    case NativeMethods.UIA_AccessKeyPropertyId:
+                        return string.Empty;
+                    case NativeMethods.UIA_HasKeyboardFocusPropertyId:
+                        return _owningListBox.Focused && _owningListBox.SelectedIndex == _itemEntryIndex;
+                    case NativeMethods.UIA_IsKeyboardFocusablePropertyId:
+                        return (State & AccessibleStates.Focusable) == AccessibleStates.Focusable;
+                    case NativeMethods.UIA_IsEnabledPropertyId:
+                        return _owningListBox.Enabled;
+                    case NativeMethods.UIA_HelpTextPropertyId:
+                        return Help ?? string.Empty;
+                    case NativeMethods.UIA_IsPasswordPropertyId:
+                        return false;
+                    case NativeMethods.UIA_NativeWindowHandlePropertyId:
+                        return _owningListBox.Handle;
+                    case NativeMethods.UIA_IsOffscreenPropertyId:
+                        return (State & AccessibleStates.Offscreen) == AccessibleStates.Offscreen;
+                    case NativeMethods.UIA_IsSelectionItemPatternAvailablePropertyId:
+                        return IsPatternSupported(NativeMethods.UIA_SelectionItemPatternId);
+                    case NativeMethods.UIA_IsScrollItemPatternAvailablePropertyId:
+                        return IsPatternSupported(NativeMethods.UIA_ScrollItemPatternId);
+                    default:
+                        return base.GetPropertyValue(propertyID);
+                }
+            }
+
             /// <summary>
             /// Gets the help text.
             /// </summary>
@@ -4426,6 +4464,23 @@ namespace System.Windows.Forms {
                 {
                     return _systemIAccessible.accHelp[GetChildId()];
                 }
+            }
+
+            /// <summary>
+            /// Indicates whether specified pattern is supported.
+            /// </summary>
+            /// <param name="patternId">The pattern ID.</param>
+            /// <returns>True if specified </returns>
+            internal override bool IsPatternSupported(int patternId)
+            {
+                if (patternId == NativeMethods.UIA_ScrollItemPatternId ||
+                    patternId == NativeMethods.UIA_LegacyIAccessiblePatternId ||
+                    patternId == NativeMethods.UIA_SelectionItemPatternId)
+                {
+                    return true;
+                }
+
+                return base.IsPatternSupported(patternId);
             }
 
             /// <summary>
@@ -4461,6 +4516,23 @@ namespace System.Windows.Forms {
             }
 
             /// <summary>
+            /// Gets the runtime ID.
+            /// </summary>
+            internal override int[] RuntimeId
+            {
+                get
+                {
+                    var runtimeId = new int[4];
+                    runtimeId[0] = RuntimeIDFirstItem;
+                    runtimeId[1] = (int)(long)_owningListBox.Handle;
+                    runtimeId[2] = _owningListBox.GetHashCode();
+                    runtimeId[3] = _itemEntry.GetHashCode();
+
+                    return runtimeId;
+                }
+            }
+
+            /// <summary>
             /// Gets the accessible state.
             /// </summary>
             public override AccessibleStates State
@@ -4479,115 +4551,47 @@ namespace System.Windows.Forms {
                     }
                 }
             }
-            #endregion
 
-            #region Internal methods
+            internal override void SetFocus()
+            {
+                base.SetFocus();
+                SelectItem();
+                RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+            }
+
+            internal override void SelectItem()
+            {
+                _owningListBox.SelectedIndex = _itemEntryIndex;
+
+                SafeNativeMethods.InvalidateRect(new HandleRef(this, _owningListBox.Handle), null, false);
+
+                RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
+            }
+
             internal override void AddToSelection()
             {
                 SelectItem();
             }
 
-            public override void DoDefaultAction()
-            {
-                SetFocus();
-            }
-
-            internal override UnsafeNativeMethods.IRawElementProviderFragment FragmentNavigate(UnsafeNativeMethods.NavigateDirection direction)
-            {
-                switch (direction)
-                {
-                    case UnsafeNativeMethods.NavigateDirection.Parent:
-                        return _owningListBox.AccessibilityObject;
-                    case UnsafeNativeMethods.NavigateDirection.PreviousSibling:
-                        if (_itemEntryIndex < 1)
-                        {
-                            return null;
-                        }
-                        else
-                        {
-                            return (ListBoxItemAccessibleObject)_owningAccessibleObject.ItemAccessibleObjects[_owningListBox.Items.EntryArray.Entries[_itemEntryIndex - 1]];
-                        }
-                    case UnsafeNativeMethods.NavigateDirection.NextSibling:
-                        if (_itemEntryIndex > _owningListBox.Items.Count - 2)
-                        {
-                            return null;
-                        }
-                        else
-                        {
-                            return (ListBoxItemAccessibleObject)_owningAccessibleObject.ItemAccessibleObjects[_owningListBox.Items.EntryArray.Entries[_itemEntryIndex + 1]];
-                        }
-                }
-
-                return base.FragmentNavigate(direction);
-            }
-
-            internal override int GetChildId()
-            {
-                return _itemEntryIndex + 1; // Index is zero-based, Child ID is 1-based.
-            }
-
-            internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
-            {
-                return base.GetFocus();
-            }
-
-            internal override object GetPropertyValue(int propertyID)
-            {
-                switch (propertyID)
-                {
-                    case NativeMethods.UIA_RuntimeIdPropertyId:
-                        return RuntimeId;
-                    case NativeMethods.UIA_BoundingRectanglePropertyId:
-                        return Bounds;
-                    case NativeMethods.UIA_ControlTypePropertyId:
-                        return NativeMethods.UIA_ListItemControlTypeId;
-                    case NativeMethods.UIA_NamePropertyId:
-                        return Name;
-                    case NativeMethods.UIA_AccessKeyPropertyId:
-                        return string.Empty;
-                    case NativeMethods.UIA_HasKeyboardFocusPropertyId:
-                        return _owningListBox.FocusedIndex == _itemEntryIndex;
-                    case NativeMethods.UIA_IsKeyboardFocusablePropertyId:
-                        return (State & AccessibleStates.Focusable) == AccessibleStates.Focusable;
-                    case NativeMethods.UIA_IsEnabledPropertyId:
-                        return _owningListBox.Enabled;
-                    case NativeMethods.UIA_HelpTextPropertyId:
-                        return Help ?? string.Empty;
-                    case NativeMethods.UIA_IsPasswordPropertyId:
-                        return false;
-                    case NativeMethods.UIA_NativeWindowHandlePropertyId:
-                        return _owningListBox.Handle;
-                    case NativeMethods.UIA_IsOffscreenPropertyId:
-                        return (State & AccessibleStates.Offscreen) == AccessibleStates.Offscreen;
-                    case NativeMethods.UIA_IsSelectionItemPatternAvailablePropertyId:
-                        return IsPatternSupported(NativeMethods.UIA_SelectionItemPatternId);
-                    case NativeMethods.UIA_IsScrollItemPatternAvailablePropertyId:
-                        return IsPatternSupported(NativeMethods.UIA_ScrollItemPatternId);
-                    default:
-                        return base.GetPropertyValue(propertyID);
-                }
-            }
-
-            /// <summary>
-            /// Indicates whether specified pattern is supported.
-            /// </summary>
-            /// <param name="patternId">The pattern ID.</param>
-            /// <returns>True if specified </returns>
-            internal override bool IsPatternSupported(int patternId)
-            {
-                if (patternId == NativeMethods.UIA_ScrollItemPatternId ||
-                    patternId == NativeMethods.UIA_LegacyIAccessiblePatternId ||
-                    patternId == NativeMethods.UIA_SelectionItemPatternId)
-                {
-                    return true;
-                }
-
-                return base.IsPatternSupported(patternId);
-            }
-
             internal override void RemoveFromSelection()
             {
                 // Do nothing, C++ implementation returns UIA_E_INVALIDOPERATION 0x80131509
+            }
+
+            internal override bool IsItemSelected
+            {
+                get
+                {
+                    return (State & AccessibleStates.Selected) != 0;
+                }
+            }
+
+            internal override UnsafeNativeMethods.IRawElementProviderSimple ItemSelectionContainer
+            {
+                get
+                {
+                    return _owningAccessibleObject;
+                }
             }
 
             internal override void ScrollIntoView()
@@ -4634,23 +4638,6 @@ namespace System.Windows.Forms {
                 }
             }
 
-            internal override void SelectItem()
-            {
-                _owningListBox.SelectedIndex = _itemEntryIndex;
-
-                SafeNativeMethods.InvalidateRect(new HandleRef(this, _owningListBox.Handle), null, false);
-                RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
-            }
-
-            internal override void SetFocus()
-            {
-                RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                SelectItem();
-            }
-            #endregion
-
-            #region Public methods
             public AccessibleObject GetChildFragment(int index)
             {
                 if (index < 0 || index >= _owningListBox.Items.Count)
@@ -4660,34 +4647,6 @@ namespace System.Windows.Forms {
 
                 return _owningAccessibleObject.ItemAccessibleObjects[_itemEntry] as AccessibleObject;
             }
-
-            public override AccessibleObject GetFocused()
-            {
-                return base.GetFocused();
-            }
-
-            public override AccessibleObject GetSelected()
-            {
-                return base.GetSelected();
-            }
-
-            public override void Select(AccessibleSelection flags)
-            {
-                try
-                {
-                    _systemIAccessible.accSelect((int)flags, GetChildId());
-                }
-                catch (ArgumentException)
-                {
-                    // In Everett, the ListBox accessible children did not have any selection capability.
-                    // In Whidbey, they delegate the selection capability to OLEACC.
-                    // However, OLEACC does not deal w/ several Selection flags: ExtendSelection, AddSelection, RemoveSelection.
-                    // OLEACC instead throws an ArgumentException.
-                    // Since Whidbey API's should not throw an exception in places where Everett API's did not, we catch
-                    // the ArgumentException and fail silently.
-                }
-            }
-            #endregion
         }
     }
 }
