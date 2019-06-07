@@ -1710,8 +1710,8 @@ namespace System.Windows.Forms {
         ///     still fired to external listeners
         /// </summary>
         protected override void OnSelectedIndexChanged(EventArgs e) {
-            AccessibilityObject.GetSelected().RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
-            AccessibilityObject.GetSelected().RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
+            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
 
             base.OnSelectedIndexChanged(e);
 
