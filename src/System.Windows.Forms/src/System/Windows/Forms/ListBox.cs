@@ -1555,7 +1555,27 @@ namespace System.Windows.Forms {
 
             base.OnChangeUICues(e);
         }
-        
+
+        internal bool HasKeyboardFocus { get; set; }
+
+        protected override void OnGotFocus(EventArgs e)
+        {
+                var focusedChild = AccessibilityObject.GetFocused();
+                if(focusedChild != null)
+                {
+                    HasKeyboardFocus = false;
+                    focusedChild.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+                }
+                else
+                {
+                    HasKeyboardFocus = true;
+                    AccessibilityObject.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+                }
+               
+            base.OnGotFocus(e);
+        }
+
+
         /// <summary>
         ///     Actually goes and fires the drawItem event.  Inheriting controls
         ///     should use this to know when the event is fired [this is preferable to
@@ -1655,31 +1675,6 @@ namespace System.Windows.Forms {
             UpdateFontCache();
         }
 
-        internal bool HasKeyboardFocus { get; set; }
-
-        protected override void OnGotFocus(EventArgs e)
-        {
-            if (SelectedIndex == -1)
-            {
-                var firstChild = AccessibilityObject.GetChild(0);
-                if (firstChild != null)
-                {
-                    firstChild.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                }
-                else
-                {
-                    AccessibilityObject.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
-                }
-                
-            }
-            else
-            {
-                AccessibilityObject.GetChild(SelectedIndex).SetFocus();
-            }
-
-            base.OnGotFocus(e);
-        }
-
         /// <summary>
         ///    <para>We override this so we can re-create the handle if the parent has changed.</para>
         /// </summary>
@@ -1726,8 +1721,7 @@ namespace System.Windows.Forms {
         ///     however, remember to call base.OnSelectedIndexChanged(e); to ensure the event is
         ///     still fired to external listeners
         /// </summary>
-        protected override void OnSelectedIndexChanged(EventArgs e)
-        {
+        protected override void OnSelectedIndexChanged(EventArgs e) {
             if (Focused && FocusedItemIsChanged())
             {
                 var g = AccessibilityObject.GetFocused();
