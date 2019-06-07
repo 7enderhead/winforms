@@ -1655,6 +1655,8 @@ namespace System.Windows.Forms {
             UpdateFontCache();
         }
 
+        internal bool HasKeyboardFocus { get; set; }
+
         protected override void OnGotFocus(EventArgs e)
         {
             if (SelectedIndex == -1)
@@ -1702,6 +1704,21 @@ namespace System.Windows.Forms {
 
         }
 
+        AccessibleObject _focused;
+
+        private bool FocusedItemIsChanged()
+        {
+            if(_focused?.GetChildId() == AccessibilityObject?.GetFocused()?.GetChildId())
+            {
+                return false;
+            }
+            else
+            {
+                _focused = AccessibilityObject.GetFocused();
+                return true;
+            }
+        }
+
         /// <summary>
         ///     Actually goes and fires the selectedIndexChanged event.  Inheriting controls
         ///     should use this to know when the event is fired [this is preferable to
@@ -1709,9 +1726,18 @@ namespace System.Windows.Forms {
         ///     however, remember to call base.OnSelectedIndexChanged(e); to ensure the event is
         ///     still fired to external listeners
         /// </summary>
-        protected override void OnSelectedIndexChanged(EventArgs e) {
-            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
-            AccessibilityObject.GetSelected()?.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+        protected override void OnSelectedIndexChanged(EventArgs e)
+        {
+            if (Focused && FocusedItemIsChanged())
+            {
+                var g = AccessibilityObject.GetFocused();
+                var f = AccessibilityObject.GetSelected();
+                if (AccessibilityObject.GetFocused() == AccessibilityObject.GetSelected())
+                {
+                    AccessibilityObject.GetFocused()?.RaiseAutomationEvent(NativeMethods.UIA_SelectionItem_ElementSelectedEventId);
+                }
+                AccessibilityObject.GetFocused()?.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+            }
 
             base.OnSelectedIndexChanged(e);
 
@@ -2551,10 +2577,17 @@ namespace System.Windows.Forms {
                 }
             }
 
+            internal delegate void DeleteItem();
+
+            internal event DeleteItem OnItemRemoved = () => { }; //OnItemRemoved != null always
+
             /// <summary>
             ///     Removes the item at the given index.
             /// </summary>
             public void RemoveAt(int index) {
+
+                OnItemRemoved();
+
                 count--;
                 for (int i = index; i < count; i++) {
                     entries[i] = entries[i+1];
@@ -3969,6 +4002,11 @@ namespace System.Windows.Forms {
             private readonly ListBox _owningListBox;
             private readonly IAccessible _systemIAccessible;
 
+            private void DeleteAcItem()
+            {
+                InitAccessibleObjectCollection();
+            }
+
             /// <summary>
             /// Initializes new instance of ListBoxAccessibleObject.
             /// </summary>
@@ -3978,6 +4016,8 @@ namespace System.Windows.Forms {
                 _owningListBox = owningListBox;
                 _itemAccessibleObjects = new ListBoxItemAccessibleObjectCollection(owningListBox, this);
                 _systemIAccessible = GetSystemIAccessibleInternal();
+                _owningListBox.Items.EntryArray.OnItemRemoved += DeleteAcItem;
+                InitAccessibleObjectCollection();
             }
 
             #region Internal properties
@@ -4083,22 +4123,16 @@ namespace System.Windows.Forms {
             /// <returns>The accessible object of corresponding element in the provided coordinates.</returns>
             internal override UnsafeNativeMethods.IRawElementProviderFragment ElementProviderFromPoint(double x, double y)
             {
-                var systemIAccessible = GetSystemIAccessibleInternal();
-                if (systemIAccessible != null)
-                {
-                    object result = systemIAccessible.accHitTest((int)x, (int)y);
-                    if (result is int)
-                    {
-                        int childId = (int)result;
-                        return GetChildFragment(childId - 1);
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
+                AccessibleObject element = HitTest((int)x, (int)y);
 
-                return base.ElementProviderFromPoint(x, y);
+                if (element != null)
+                {
+                    return element;
+                }
+                else
+                {
+                    return base.ElementProviderFromPoint(x, y);
+                }
             }
 
             /// <summary>
@@ -4138,7 +4172,7 @@ namespace System.Windows.Forms {
             internal override UnsafeNativeMethods.IRawElementProviderFragment GetFocus()
             {
                 AccessibleObject focusedChild = GetFocused();
-                focusedChild.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
+                focusedChild?.RaiseAutomationEvent(NativeMethods.UIA_AutomationFocusChangedEventId);
 
                 return focusedChild;
             }
@@ -4157,7 +4191,7 @@ namespace System.Windows.Forms {
                     case NativeMethods.UIA_NamePropertyId:
                         return Name;
                     case NativeMethods.UIA_HasKeyboardFocusPropertyId:
-                        return _owningListBox.Focused;
+                        return _owningListBox.HasKeyboardFocus && _owningListBox.Focused;
                     case NativeMethods.UIA_NativeWindowHandlePropertyId:
                         return _owningListBox.Handle;
                     case NativeMethods.UIA_IsSelectionPatternAvailablePropertyId:
@@ -4232,6 +4266,11 @@ namespace System.Windows.Forms {
             {
                 return GetChildFragment(index);
             }
+            
+            public override int GetChildCount()
+            {
+                return _owningListBox.Items.Count;
+            }
 
             public AccessibleObject GetChildFragment(int index)
             {
@@ -4260,6 +4299,32 @@ namespace System.Windows.Forms {
                 if (index >= 0)
                 {
                     return GetChild(index);
+                }
+
+                return null;
+            }
+
+            public override AccessibleObject HitTest(int x, int y)
+            {
+                // Within a child element?
+                //
+                int count = GetChildCount();
+                for (int index = 0; index < count; ++index)
+                {
+                    AccessibleObject child = GetChild(index);
+                    if (child.Bounds.Contains(x, y))
+                    {
+                        _owningListBox.HasKeyboardFocus = false;
+                        return child;
+                    }
+                }
+
+                // Within the CheckedListBox bounds?
+                //
+                if (this.Bounds.Contains(x, y))
+                {
+                    _owningListBox.HasKeyboardFocus = true;
+                    return this;
                 }
 
                 return null;
