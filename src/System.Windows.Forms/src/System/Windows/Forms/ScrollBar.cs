@@ -64,11 +64,14 @@ namespace System.Windows.Forms
             set => base.AutoSize = value;
         }
 
+        [Marker("Observer Event")]
         [Browsable(false)]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public new event EventHandler AutoSizeChanged
         {
+            [Marker("Observer Registration")]
             add => base.AutoSizeChanged += value;
+            [Marker("Observer Deregistration")]
             remove => base.AutoSizeChanged -= value;
         }
 

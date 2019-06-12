@@ -66,11 +66,14 @@ namespace System.Windows.Forms
             }
         }
 
+        [Marker("Observer Event")]
         [SRCategory(nameof(SR.CatPropertyChanged)), SRDescription(nameof(SR.ControlOnAutoSizeChangedDescr))]
         [Browsable(true), EditorBrowsable(EditorBrowsableState.Always)]
         new public event EventHandler AutoSizeChanged
         {
+            [Marker("Observer Registration")]
             add => base.AutoSizeChanged += value;
+            [Marker("Observer Deregistration")]
             remove => base.AutoSizeChanged -= value;
         }
 

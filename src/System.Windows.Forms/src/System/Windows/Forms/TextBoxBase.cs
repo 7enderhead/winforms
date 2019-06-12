@@ -350,10 +350,13 @@ namespace System.Windows.Forms
 
 
 
+        [Marker("Observer Event")]
         [Browsable(false), EditorBrowsable(EditorBrowsableState.Never)]
         new public event EventHandler AutoSizeChanged
         {
+            [Marker("Observer Registration")]
             add => base.AutoSizeChanged += value;
+            [Marker("Observer Deregistration")]
             remove => base.AutoSizeChanged -= value;
         }
 

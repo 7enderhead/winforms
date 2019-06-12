@@ -1010,7 +1010,7 @@ namespace System.Windows.Forms
             }
         }
 
-
+        [Marker("Observer Event")]
         [SRCategory(nameof(SR.CatPropertyChanged)), SRDescription(nameof(SR.ControlOnAutoSizeChangedDescr))]
         [Browsable(false), EditorBrowsable(EditorBrowsableState.Never)]
         public event EventHandler AutoSizeChanged

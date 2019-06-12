@@ -68,10 +68,13 @@ namespace System.Windows.Forms
         /// <summary>
         ///    <para> Re-expose AutoSizeChanged.</para>
         /// </summary>
+        [Marker("Observer Event")]
         [Browsable(true), EditorBrowsable(EditorBrowsableState.Always)]
         public new event EventHandler AutoSizeChanged
         {
+            [Marker("Observer Registration")]
             add => base.AutoSizeChanged += value;
+            [Marker("Observer Deregistration")]
             remove => base.AutoSizeChanged -= value;
         }
 

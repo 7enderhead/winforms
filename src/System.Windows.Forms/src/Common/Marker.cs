@@ -8,16 +8,11 @@ using System.Text;
 
 namespace System.Windows.Forms
 {
+    [AttributeUsage(AttributeTargets.All, AllowMultiple = true)]
     public class Marker : Attribute
     {
-        IEnumerable<string> Data { get; set; }
-
-        public Marker()
-        {
-            Data = new List<string>();
-        }
-
-        public Marker(params string[] data)
+        string Data { get; set; }
+        public Marker(string data)
         {
             Data = data;
         }
