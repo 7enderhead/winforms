@@ -1193,6 +1193,7 @@ namespace System.Windows.Forms
             }
         }
 
+        [Marker("Observer Event")]
         [SRCategory(nameof(SR.CatPropertyChanged)), SRDescription(nameof(SR.ControlOnBackColorChangedDescr))]
         public event EventHandler BackColorChanged
         {

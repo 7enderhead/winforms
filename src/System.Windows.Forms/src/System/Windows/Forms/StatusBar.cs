@@ -151,7 +151,9 @@ namespace System.Windows.Forms
         [Browsable(false), EditorBrowsable(EditorBrowsableState.Never)]
         new public event EventHandler BackColorChanged
         {
+            
             add => base.BackColorChanged += value;
+            
             remove => base.BackColorChanged -= value;
         }
 

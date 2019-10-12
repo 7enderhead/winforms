@@ -646,125 +646,182 @@ namespace System.Windows.Forms
         ///    We sync the event from the hosted control and call resurface it on ToolStripItem.
         ///
 
+        [Marker("Observer EventHandler")]
         private void HandleClick(object sender, System.EventArgs e)
         {
             OnClick(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleBackColorChanged(object sender, System.EventArgs e)
         {
             OnBackColorChanged(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleDoubleClick(object sender, System.EventArgs e)
         {
             OnDoubleClick(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleDragDrop(object sender, DragEventArgs e)
         {
             OnDragDrop(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleDragEnter(object sender, DragEventArgs e)
         {
             OnDragEnter(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleDragLeave(object sender, EventArgs e)
         {
             OnDragLeave(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleDragOver(object sender, DragEventArgs e)
         {
             OnDragOver(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleEnter(object sender, System.EventArgs e)
         {
             OnEnter(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleEnabledChanged(object sender, System.EventArgs e)
         {
             OnEnabledChanged(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleForeColorChanged(object sender, System.EventArgs e)
         {
             OnForeColorChanged(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleGiveFeedback(object sender, GiveFeedbackEventArgs e)
         {
             OnGiveFeedback(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleGotFocus(object sender, EventArgs e)
         {
             OnGotFocus(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleLocationChanged(object sender, EventArgs e)
         {
             OnLocationChanged(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleLostFocus(object sender, EventArgs e)
         {
             OnLostFocus(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleKeyDown(object sender, KeyEventArgs e)
         {
             OnKeyDown(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleKeyPress(object sender, KeyPressEventArgs e)
         {
             OnKeyPress(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleKeyUp(object sender, KeyEventArgs e)
         {
             OnKeyUp(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleLeave(object sender, System.EventArgs e)
         {
             OnLeave(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleMouseDown(object sender, MouseEventArgs e)
         {
             OnMouseDown(e);
             RaiseMouseEvent(ToolStripItem.EventMouseDown, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleMouseEnter(object sender, EventArgs e)
         {
             OnMouseEnter(e);
             RaiseEvent(ToolStripItem.EventMouseEnter, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleMouseLeave(object sender, EventArgs e)
         {
             OnMouseLeave(e);
             RaiseEvent(ToolStripItem.EventMouseLeave, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleMouseHover(object sender, EventArgs e)
         {
             OnMouseHover(e);
             RaiseEvent(ToolStripItem.EventMouseHover, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleMouseMove(object sender, MouseEventArgs e)
         {
             OnMouseMove(e);
             RaiseMouseEvent(ToolStripItem.EventMouseMove, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleMouseUp(object sender, MouseEventArgs e)
         {
             OnMouseUp(e);
             RaiseMouseEvent(ToolStripItem.EventMouseUp, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandlePaint(object sender, PaintEventArgs e)
         {
             OnPaint(e);
             RaisePaintEvent(ToolStripItem.EventPaint, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleQueryAccessibilityHelp(object sender, QueryAccessibilityHelpEventArgs e)
         {
             ((QueryAccessibilityHelpEventHandler)Events[ToolStripItem.EventQueryAccessibilityHelp])?.Invoke(this, e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleQueryContinueDrag(object sender, QueryContinueDragEventArgs e)
         {
             OnQueryContinueDrag(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleRightToLeftChanged(object sender, EventArgs e)
         {
             OnRightToLeftChanged(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleResize(object sender, EventArgs e)
         {
             if (suspendSyncSizeCount == 0)
@@ -773,10 +830,14 @@ namespace System.Windows.Forms
             }
         }
 
+
+        [Marker("Observer EventHandler")]
         private void HandleTextChanged(object sender, EventArgs e)
         {
             OnTextChanged(e);
         }
+
+        [Marker("Observer EventHandler")]
         private void HandleControlVisibleChanged(object sender, EventArgs e)
         {
             // check the STATE_VISIBLE flag rather than using Control.Visible.
@@ -792,11 +853,13 @@ namespace System.Windows.Forms
             };
         }
 
+        [Marker("Observer EventHandler")]
         private void HandleValidating(object sender, CancelEventArgs e)
         {
             OnValidating(e);
         }
 
+        [Marker("Observer EventHandler")]
         private void HandleValidated(object sender, System.EventArgs e)
         {
             OnValidated(e);
@@ -806,6 +869,7 @@ namespace System.Windows.Forms
         {
             Control.AccessibleDescription = AccessibleDescription;
         }
+
         internal override void OnAccessibleNameChanged(EventArgs e)
         {
             Control.AccessibleName = AccessibleName;

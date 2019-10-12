@@ -121,7 +121,9 @@ namespace System.Windows.Forms
         ]
         public new event EventHandler BackColorChanged
         {
+            
             add => base.BackColorChanged += value;
+            
             remove => base.BackColorChanged -= value;
         }
 

@@ -69,9 +69,9 @@ namespace System.Windows.Forms
         [EditorBrowsable(EditorBrowsableState.Never)]
         public new event EventHandler AutoSizeChanged
         {
-            [Marker("Observer Registration")]
+            
             add => base.AutoSizeChanged += value;
-            [Marker("Observer Deregistration")]
+            
             remove => base.AutoSizeChanged -= value;
         }
 
@@ -87,7 +87,9 @@ namespace System.Windows.Forms
         [EditorBrowsable(EditorBrowsableState.Never)]
         public new event EventHandler BackColorChanged
         {
+            
             add => base.BackColorChanged += value;
+            
             remove => base.BackColorChanged -= value;
         }
 

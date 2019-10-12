@@ -169,9 +169,9 @@ namespace System.Windows.Forms
         [Marker("Observer Event")]
         public new event EventHandler AutoSizeChanged
         {
-            [Marker("Observer Registration")]
+            
             add => base.AutoSizeChanged += value;
-            [Marker("Observer Deregistration")]
+            
             remove => base.AutoSizeChanged -= value;
         }
 
